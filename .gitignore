@@ -1,0 +1,27 @@
+# Build artifacts
+out/
+*.apk
+!overlay/vendor/kindle-rewriter/prebuilt/KOReader.apk
+
+# Book collection (downloaded at runtime, not committed)
+books/collection/
+
+# Batch flash state and logs
+.state/
+logs/
+
+# Android/Gradle build
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Tools cloned at runtime
+tools/amonet/

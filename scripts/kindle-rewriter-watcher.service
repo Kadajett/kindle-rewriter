@@ -1,0 +1,29 @@
+# Systemd service for KindleRewriter batch flash watcher
+# Install with:
+#   sudo cp kindle-rewriter-watcher.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable kindle-rewriter-watcher
+#   sudo systemctl start kindle-rewriter-watcher
+#
+# This runs the watch mode in the background so you can just
+# plug tablets in and they get processed automatically.
+
+[Unit]
+Description=KindleRewriter Batch Flash Watcher
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+# UPDATE THESE PATHS for your system:
+Environment=ARIEL_ROM=/path/to/lineage-14.1-ariel.zip
+Environment=SOHO_ROM=/path/to/lineage-11.0-soho.zip
+Environment=ARIEL_RECOVERY=/path/to/twrp-ariel.img
+Environment=SOHO_RECOVERY=/path/to/twrp-soho.img
+Environment=AMONET_DIR=/path/to/amonet
+ExecStart=/home/kadajett/Dev/claudeEmptyFolderChat/kindleRewriter/scripts/batch-flash.sh --watch
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
