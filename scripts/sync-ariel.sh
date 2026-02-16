@@ -15,17 +15,8 @@ fi
 
 cd "$ARIEL_DIR"
 
-echo "=== Syncing LineageOS 14.1 source tree ==="
-echo "This will download ~30GB. Go get coffee."
-echo ""
-
-# Sync main source tree (use -j for parallel, -c for current branch only)
-repo sync -j$(nproc) -c --no-clone-bundle --no-tags --force-sync
-
-echo ""
-echo "=== Adding ariel device tree and kernel ==="
-
-# Create local manifests for device-specific repos
+# Create local manifests BEFORE syncing so repo picks up the correct repos
+echo "=== Setting up local manifests ==="
 mkdir -p .repo/local_manifests
 
 cat > .repo/local_manifests/ariel.xml << 'MANIFEST'
@@ -49,20 +40,32 @@ cat > .repo/local_manifests/ariel.xml << 'MANIFEST'
              remote="github"
              revision="cm-14.1" />
 
-    <!-- Vendor blobs -->
-    <project name="amazon-oss/proprietary_vendor_amazon"
-             path="vendor/amazon"
+    <!-- Vendor blobs (device-specific) -->
+    <project name="amazon-oss/android_vendor_amazon_ariel"
+             path="vendor/amazon/ariel"
+             remote="github"
+             revision="cm-14.1" />
+
+    <!-- Vendor blobs (common MT8135) -->
+    <project name="amazon-oss/android_vendor_amazon_mt8135-common"
+             path="vendor/amazon/mt8135-common"
+             remote="github"
+             revision="cm-14.1" />
+
+    <!-- MediaTek MT76xx WiFi HAL (provides libwifi-hal-mt66xx) -->
+    <project name="amazon-oss/android_hardware_mediatek_mt76xx"
+             path="hardware/mediatek/mt76xx"
              remote="github"
              revision="cm-14.1" />
 </manifest>
 MANIFEST
 
-echo "Local manifest created. Syncing device repos..."
-repo sync -j$(nproc) -c --no-clone-bundle --no-tags --force-sync \
-    device/amazon/ariel \
-    device/amazon/mt8135-common \
-    kernel/amazon/mt8135 \
-    vendor/amazon
+echo "=== Syncing LineageOS 14.1 source tree + device repos ==="
+echo "This will download ~30GB on first run. Go get coffee."
+echo ""
+
+# Sync everything (main tree + device repos from local manifest)
+repo sync -j$(nproc) -c --no-clone-bundle --no-tags --force-sync
 
 # Link our overlay into the build tree
 echo ""

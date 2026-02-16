@@ -1,7 +1,6 @@
 # Build artifacts
 out/
 *.apk
-!overlay/vendor/kindle-rewriter/prebuilt/KOReader.apk
 
 # Book collection (downloaded at runtime, not committed)
 books/collection/

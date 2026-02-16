@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# curl replacement for jack-admin that uses Java's SSL (bypasses OpenSSL 3.x issues)
+JAVA="${JAVA_HOME:-/usr/lib/jvm/java-8-openjdk-amd64}/bin/java"
+JACK_HOME="${JACK_HOME:-$HOME/.jack-server}"
+TOOLS_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Parse curl-like arguments
+URL="" METHOD="GET" SILENT=0 WRITE_OUT="" OUTPUT="/dev/null" FAIL=0
+FORM_ARGS=()
+HEADER_ARGS=()
+DATA=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f|--fail) FAIL=1; shift ;;
+    -k|--insecure) shift ;;
+    --cert|--cacert) shift 2 ;;
+    --output) OUTPUT="$2"; shift 2 ;;
+    --no-buffer) shift ;;
+    --write-out) WRITE_OUT="$2"; shift 2 ;;
+    --silent|-s) SILENT=1; shift ;;
+    --connect-timeout) shift 2 ;;
+    -X|--request) METHOD="$2"; shift 2 ;;
+    -F|--form) FORM_ARGS+=("$2"); shift 2 ;;
+    -H) HEADER_ARGS+=("$2"); shift 2 ;;
+    --data) DATA="$2"; shift 2 ;;
+    --noproxy) shift 2 ;;
+    --tlsv1*|--tls-max) shift; [[ "${1:-}" =~ ^[0-9] ]] && shift ;;
+    https://*|http://*) URL="$1"; shift ;;
+    *) shift ;;
+  esac
+done
+
+if [ -z "$URL" ]; then
+  exit 1
+fi
+
+# Build Java args
+JAVA_ARGS=("$JACK_HOME/client.jks" "$JACK_HOME/server.jks" "Jack-Server" "$METHOD" "$URL")
+
+# Convert -H "Name: Value" to header:Name=Value for Java client
+for h in "${HEADER_ARGS[@]}"; do
+  # "Accept: text/plain;charset=UTF-8" -> header:Accept=text/plain;charset=UTF-8
+  name=$(echo "$h" | sed 's/:.*//')
+  value=$(echo "$h" | sed 's/^[^:]*: *//')
+  JAVA_ARGS+=("header:${name}=${value}")
+done
+
+# Pass --data body content if present
+if [ -n "$DATA" ]; then
+  JAVA_ARGS+=("data:$DATA")
+fi
+
+# Convert -F args to field=value pairs for Java client
+for f in "${FORM_ARGS[@]}"; do
+  # -F "jar=@path;type=..." -> jar=path
+  # -F "force=true;type=..." -> force=true
+  field=$(echo "$f" | sed 's/;type=.*//')
+  field=$(echo "$field" | sed 's/=@/=/')
+  JAVA_ARGS+=("$field")
+done
+
+# Run Java client (body goes to stderr, HTTP code to stdout)
+RESULT=$("$JAVA" -cp "$TOOLS_DIR" JackHTTPClient "${JAVA_ARGS[@]}" 2>"$OUTPUT")
+RC=$?
+
+if [[ "$WRITE_OUT" == *http_code* ]]; then
+  echo -n "$RESULT"
+fi
+
+exit $RC
